@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#D32F2F">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SafetyFirst">
+    
+    <title>SafetyFirst.AI - WHS Assistant</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Icons -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23D32F2F' width='180' height='180'/><text x='90' y='130' font-size='100' text-anchor='middle' fill='white'>🛡️</text></svg>">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;600;800;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        :root {
+            --primary: #D32F2F;
+            --primary-dark: #B71C1C;
+            --secondary: #FF6B35;
+            --dark: #1A1F2E;
+            --gray: #4A5568;
+            --light-gray: #F7FAFC;
+            --white: #FFFFFF;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            --radius: 16px;
+        }
+        
+        body {
+            font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--light-gray);
+            color: var(--dark);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        
+        /* Header */
+        .header {
+            background: var(--primary);
+            color: var(--white);
+            padding: max(env(safe-area-inset-top), 16px) 20px 20px;
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .logo {
+            font-size: 32px;
+        }
+        
+        .app-title {
+            flex: 1;
+        }
+        
+        .app-title h1 {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+        }
+        
+        .app-title p {
+            font-size: 12px;
+            opacity: 0.9;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: #4CAF50;
+            border-radius: 50%;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Main Actions */
+        .main-actions {
+            padding: 20px;
+            display: grid;
+            gap: 16px;
+        }
+        
+        .action-card {
+            background: var(--white);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .action-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .action-card:active {
+            transform: scale(0.98);
+        }
+        
+        .action-card:active::before {
+            transform: scaleY(1);
+        }
+        
+        .action-icon {
+            width: 64px;
+            height: 64px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 24px rgba(211, 47, 47, 0.3);
+        }
+        
+        .action-title {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            color: var(--dark);
+        }
+        
+        .action-description {
+            font-size: 14px;
+            color: var(--gray);
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+        
+        /* Voice Call Button - PROMINENT */
+        .voice-action {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--white);
+            position: relative;
+            overflow: visible;
+        }
+        
+        .voice-action::before {
+            background: var(--secondary);
+        }
+        
+        .voice-action .action-icon {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            animation: breathe 3s ease-in-out infinite;
+        }
+        
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .voice-action .action-title,
+        .voice-action .action-description {
+            color: var(--white);
+        }
+        
+        .voice-action .action-description {
+            opacity: 0.9;
+        }
+        
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 16px 24px;
+            background: var(--white);
+            color: var(--primary);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn:active {
+            transform: scale(0.96);
+        }
+        
+        .voice-action .btn {
+            background: rgba(255, 255, 255, 0.95);
+        }
+        
+        .btn-secondary {
+            background: var(--primary);
+            color: var(--white);
+            border-color: var(--primary);
+        }
+        
+        /* Chat Interface */
+        .chat-section {
+            padding: 20px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .chat-container {
+            background: var(--white);
+            border-radius: var(--radius);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        
+        .chat-messages {
+            height: 300px;
+            overflow-y: auto;
+            padding: 16px;
+            background: linear-gradient(135deg, #FAFAFA 0%, #F5F5F5 100%);
+        }
+        
+        .chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 2px;
+        }
+        
+        .message {
+            margin-bottom: 16px;
+            animation: slideUp 0.3s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .message-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            color: var(--gray);
+        }
+        
+        .message-content {
+            background: var(--white);
+            padding: 12px 16px;
+            border-radius: 12px;
+            display: inline-block;
+            max-width: 85%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            line-height: 1.5;
+            font-size: 14px;
+        }
+        
+        .message-user {
+            text-align: right;
+        }
+        
+        .message-user .message-content {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--white);
+        }
+        
+        .chat-input-container {
+            padding: 16px;
+            background: var(--white);
+            border-top: 1px solid #E2E8F0;
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(211, 47, 47, 0.1);
+        }
+        
+        .btn-icon {
+            width: 48px;
+            height: 48px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            border-radius: 12px;
+        }
+        
+        /* Photo Upload */
+        .photo-upload {
+            background: var(--white);
+            border: 3px dashed #E2E8F0;
+            border-radius: var(--radius);
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .photo-upload:active {
+            transform: scale(0.98);
+            border-color: var(--primary);
+            background: rgba(211, 47, 47, 0.05);
+        }
+        
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.6;
+        }
+        
+        .upload-text {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--dark);
+        }
+        
+        .upload-hint {
+            font-size: 13px;
+            color: var(--gray);
+        }
+        
+        .photo-preview {
+            margin-top: 16px;
+            border-radius: var(--radius);
+            overflow: hidden;
+            display: none;
+        }
+        
+        .photo-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .photo-actions {
+            margin-top: 16px;
+            display: none;
+            gap: 8px;
+        }
+        
+        /* Status Messages */
+        .status {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-top: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .status-success {
+            background: #E8F5E9;
+            color: #2E7D32;
+            border: 2px solid #4CAF50;
+        }
+        
+        .status-error {
+            background: #FFEBEE;
+            color: #C62828;
+            border: 2px solid #EF5350;
+        }
+        
+        .status-loading {
+            background: #FFF3E0;
+            color: #E65100;
+            border: 2px solid #FF9800;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Install Prompt */
+        .install-prompt {
+            background: linear-gradient(135deg, var(--secondary) 0%, #E64A19 100%);
+            color: var(--white);
+            padding: 16px 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow);
+        }
+        
+        .install-prompt.show {
+            display: flex;
+        }
+        
+        .install-icon {
+            font-size: 32px;
+        }
+        
+        .install-text {
+            flex: 1;
+        }
+        
+        .install-text h3 {
+            font-size: 16px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+        
+        .install-text p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        .btn-install {
+            background: var(--white);
+            color: var(--secondary);
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        
+        /* Bottom padding for safe area */
+        .bottom-spacer {
+            height: calc(20px + env(safe-area-inset-bottom));
+        }
+        
+        /* Hide file input */
+        input[type="file"] {
+            display: none;
+        }
+        
+        /* Offline Indicator */
+        .offline-banner {
+            background: #FFF3E0;
+            color: #E65100;
+            padding: 12px 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .offline-banner.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Install Prompt -->
+    <div class="install-prompt" id="installPrompt">
+        <div class="install-icon">📲</div>
+        <div class="install-text">
+            <h3>Install SafetyFirst</h3>
+            <p>Add to home screen for quick access</p>
+        </div>
+        <button class="btn-install" onclick="installApp()">Install</button>
+    </div>
+    
+    <!-- Offline Banner -->
+    <div class="offline-banner" id="offlineBanner">
+        ⚠️ You're offline. Some features may be limited.
+    </div>
+    
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">🛡️</div>
+            <div class="app-title">
+                <h1>SafetyFirst.AI</h1>
+                <p>WHS Assistant</p>
+            </div>
+            <div class="status-indicator"></div>
+        </div>
+    </header>
+    
+    <!-- Main Actions -->
+    <div class="main-actions">
+        <!-- Voice Call Action - PRIMARY -->
+        <div class="action-card voice-action">
+            <div class="action-icon">📞</div>
+            <h2 class="action-title">Safety Hotline</h2>
+            <p class="action-description">Call our AI voice agent for instant WHS guidance - speak naturally and get immediate answers</p>
+            <button class="btn" onclick="callVoiceAgent()">
+                <span>📞</span>
+                <span>Call Now</span>
+            </button>
+        </div>
+        
+        <!-- Quick WHS Query -->
+        <div class="action-card">
+            <div class="action-icon">💬</div>
+            <h2 class="action-title">Ask a Question</h2>
+            <p class="action-description">Type your workplace safety question for instant AI-powered answers</p>
+            <button class="btn btn-secondary" onclick="scrollToChat()">
+                <span>Ask Question</span>
+            </button>
+        </div>
+        
+        <!-- Photo Analysis -->
+        <div class="action-card">
+            <div class="action-icon">📸</div>
+            <h2 class="action-title">Analyze Hazard</h2>
+            <p class="action-description">Take a photo of your workplace for AI hazard identification</p>
+            <div class="photo-upload" onclick="document.getElementById('photoInput').click()">
+                <div class="upload-icon">📷</div>
+                <div class="upload-text">Tap to Take Photo</div>
+                <div class="upload-hint">Camera or gallery</div>
+            </div>
+            <input type="file" id="photoInput" accept="image/*" capture="environment" onchange="handlePhoto(event)">
+            <div class="photo-preview" id="photoPreview">
+                <img id="previewImg">
+            </div>
+            <div class="photo-actions" id="photoActions" style="display: flex;">
+                <button class="btn btn-secondary" onclick="analyzePhoto()" style="flex: 1;">Analyze Photo</button>
+                <button class="btn" onclick="clearPhoto()" style="flex: 0 0 auto; width: 48px; padding: 0;">🗑️</button>
+            </div>
+            <div id="photoStatus"></div>
+        </div>
+    </div>
+    
+    <!-- Chat Section -->
+    <div class="chat-section">
+        <h2 class="section-title">
+            <span>💬</span>
+            <span>Chat with SafetyFirst AI</span>
+        </h2>
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message message-ai">
+                    <div class="message-label">SafetyFirst AI</div>
+                    <div class="message-content">
+                        G'day! I'm your WHS assistant. Ask me about Australian workplace safety regulations, compliance requirements, or safe work practices.
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        class="chat-input" 
+                        id="chatInput" 
+                        placeholder="e.g., What height requires fall protection?"
+                        onkeypress="if(event.key === 'Enter') sendMessage()"
+                    >
+                    <button class="btn btn-secondary btn-icon" onclick="startVoiceInput()">🎤</button>
+                    <button class="btn btn-secondary btn-icon" onclick="sendMessage()">▶</button>
+                </div>
+                <div id="chatStatus"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bottom-spacer"></div>
+    
+    <script>
+        // Configuration
+        const API_URL = 'https://safetyfirstai.app.n8n.cloud/webhook/whs-query';
+        const VOICE_NUMBER = 'tel:+17658856366'; // Will be updated with ElevenLabs number
+        
+        let deferredPrompt;
+        let currentPhoto = null;
+        
+        // PWA Installation
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPrompt').classList.add('show');
+        });
+        
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        document.getElementById('installPrompt').classList.remove('show');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        }
+        
+        // Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {
+                    console.log('Service Worker registration failed');
+                });
+            });
+        }
+        
+        // Offline Detection
+        window.addEventListener('online', () => {
+            document.getElementById('offlineBanner').classList.remove('show');
+        });
+        
+        window.addEventListener('offline', () => {
+            document.getElementById('offlineBanner').classList.add('show');
+        });
+        
+        // Voice Agent Call
+        function callVoiceAgent() {
+            if (confirm('Call SafetyFirst AI voice assistant?')) {
+                window.location.href = VOICE_NUMBER;
+            }
+        }
+        
+        // Scroll to Chat
+        function scrollToChat() {
+            document.getElementById('chatInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => document.getElementById('chatInput').focus(), 500);
+        }
+        
+        // Chat Functions
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            addMessage(message, 'user');
+            input.value = '';
+            showStatus('chatStatus', 'Searching WHS regulations...', 'loading');
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: message })
+                });
+                
+                if (!response.ok) throw new Error('API error');
+                
+                const data = await response.text();
+                addMessage(data, 'ai');
+                clearStatus('chatStatus');
+                
+                // Vibrate on success
+                if (navigator.vibrate) navigator.vibrate(50);
+            } catch (error) {
+                showStatus('chatStatus', 'Connection error. Please try again.', 'error');
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            }
+        }
+        
+        function addMessage(text, sender) {
+            const container = document.getElementById('chatMessages');
+            const msg = document.createElement('div');
+            msg.className = `message message-${sender}`;
+            msg.innerHTML = `
+                <div class="message-label">${sender === 'user' ? 'You' : 'SafetyFirst AI'}</div>
+                <div class="message-content">${text}</div>
+            `;
+            container.appendChild(msg);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        // Voice Input
+        function startVoiceInput() {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert('Voice input not supported in your browser');
+                return;
+            }
+            
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-AU';
+            recognition.continuous = false;
+            
+            recognition.onstart = () => {
+                showStatus('chatStatus', 'Listening... Speak now', 'loading');
+                if (navigator.vibrate) navigator.vibrate(100);
+            };
+            
+            recognition.onresult = (e) => {
+                document.getElementById('chatInput').value = e.results[0][0].transcript;
+                clearStatus('chatStatus');
+                if (navigator.vibrate) navigator.vibrate(50);
+            };
+            
+            recognition.onerror = () => {
+                showStatus('chatStatus', 'Voice input failed. Please try again.', 'error');
+            };
+            
+            recognition.start();
+        }
+        
+        // Photo Functions
+        function handlePhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentPhoto = e.target.result;
+                document.getElementById('previewImg').src = currentPhoto;
+                document.getElementById('photoPreview').style.display = 'block';
+                document.getElementById('photoActions').style.display = 'flex';
+                showStatus('photoStatus', 'Photo ready for analysis', 'success');
+                if (navigator.vibrate) navigator.vibrate(50);
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        async function analyzePhoto() {
+            if (!currentPhoto) return;
+            
+            showStatus('photoStatus', 'Analyzing hazards with AI...', 'loading');
+            
+            // For demo - in production this would call actual photo analysis endpoint
+            setTimeout(() => {
+                showStatus('photoStatus', 'Analysis complete! Check chat for results.', 'success');
+                addMessage('Photo analysis: [AI would identify hazards and provide safety recommendations here]', 'ai');
+                if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+            }, 2000);
+        }
+        
+        function clearPhoto() {
+            currentPhoto = null;
+            document.getElementById('photoPreview').style.display = 'none';
+            document.getElementById('photoActions').style.display = 'none';
+            document.getElementById('photoInput').value = '';
+            clearStatus('photoStatus');
+        }
+        
+        // Status Helpers
+        function showStatus(id, msg, type) {
+            document.getElementById(id).innerHTML = `
+                <div class="status status-${type}">
+                    ${type === 'loading' ? '<span class="spinner"></span>' : ''}${msg}
+                </div>`;
+        }
+        
+        function clearStatus(id) {
+            document.getElementById(id).innerHTML = '';
+        }
+        
+        // Prevent pull-to-refresh on iOS
+        let lastTouchY = 0;
+        let preventPullToRefresh = false;
+        
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            lastTouchY = e.touches[0].clientY;
+            preventPullToRefresh = window.pageYOffset === 0;
+        }, { passive: false });
+        
+        document.addEventListener('touchmove', (e) => {
+            const touchY = e.touches[0].clientY;
+            const touchYDelta = touchY - lastTouchY;
+            lastTouchY = touchY;
+            
+            if (preventPullToRefresh && touchYDelta > 0) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
