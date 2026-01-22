@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafetyFirst.AI</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;600;800&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Work Sans', sans-serif; background: #F7FAFC; }
+        
+        /* Auth Screen */
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #D32F2F 0%, #B71C1C 100%);
+            padding: 20px;
+        }
+        .auth-box {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 16px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .auth-logo { text-align: center; margin-bottom: 30px; }
+        .auth-logo-icon { font-size: 64px; }
+        .auth-logo-text { font-size: 28px; font-weight: 900; color: #D32F2F; }
+        .auth-subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .form-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            font-size: 16px;
+        }
+        .form-input:focus { outline: none; border-color: #D32F2F; }
+        .auth-btn {
+            width: 100%;
+            padding: 16px;
+            background: #D32F2F;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .auth-toggle { text-align: center; margin-top: 20px; color: #666; }
+        .auth-toggle-link { color: #D32F2F; font-weight: 600; cursor: pointer; text-decoration: none; }
+        .auth-error { background: #FEE; color: #C00; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+        .auth-success { background: #EFE; color: #090; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+        
+        /* App */
+        #app { display: none; }
+        #authScreen { display: block; }
+        .header {
+            background: #D32F2F;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { font-size: 24px; }
+        .header-buttons { display: flex; gap: 10px; }
+        .logout-btn, .billing-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .billing-btn:hover { background: rgba(255,255,255,0.3); }
+        
+        /* Tier Badge */
+        .tier-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-left: 10px;
+        }
+        .tier-trial { background: #FFC107; color: #000; }
+        .tier-pro { background: #4CAF50; color: white; }
+        .tier-growth { background: #2196F3; color: white; }
+        
+        /* Usage Counter */
+        .usage-banner {
+            background: #FFF3CD;
+            color: #856404;
+            padding: 16px 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .usage-banner.warning { background: #F8D7DA; color: #721C24; }
+        
+        /* Upgrade Modal */
+        .upgrade-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .upgrade-modal.show { display: flex; }
+        .upgrade-content {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        .upgrade-content h2 {
+            font-size: 28px;
+            font-weight: 900;
+            color: #D32F2F;
+            margin-bottom: 16px;
+        }
+        .upgrade-content p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .upgrade-buttons {
+            display: flex;
+            gap: 12px;
+            flex-direction: column;
+        }
+        .upgrade-btn {
+            padding: 16px 24px;
+            background: #D32F2F;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: block;
+        }
+        .upgrade-btn.secondary {
+            background: white;
+            color: #D32F2F;
+            border: 2px solid #D32F2F;
+        }
+        
+        .main-content { padding: 20px; }
+        .action-card {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        .action-icon { font-size: 48px; margin-bottom: 16px; }
+        .action-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+        .action-description { color: #666; margin-bottom: 16px; }
+        .btn {
+            width: 100%;
+            padding: 16px;
+            background: #D32F2F;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .btn:disabled {
+            background: #CCC;
+            cursor: not-allowed;
+        }
+        .feature-locked {
+            opacity: 0.5;
+            position: relative;
+        }
+        .lock-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+        }
+        .chat-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #E2E8F0;
+            border-radius: 12px;
+            font-size: 16px;
+            margin-bottom: 12px;
+        }
+        .messages {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 16px;
+        }
+        .message {
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+        }
+        .message-ai { background: #F0F0F0; }
+        .message-user { background: #FFEBE9; margin-left: 20px; }
+        
+        .refresh-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        .refresh-btn:hover { background: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+    <!-- Auth Screen -->
+    <div id="authScreen">
+        <div class="auth-container">
+            <div class="auth-box">
+                <div class="auth-logo">
+                    <div class="auth-logo-icon">🛡️</div>
+                    <div class="auth-logo-text">SafetyFirst.AI</div>
+                </div>
+                <div class="auth-subtitle">AI-Powered WHS Assistant</div>
+                <div id="authMessage"></div>
+                
+                <form id="signInForm">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="signInEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="signInPassword" required>
+                    </div>
+                    <button type="submit" class="auth-btn">SIGN IN</button>
+                </form>
+                
+                <form id="signUpForm" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="signUpEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-input" id="signUpPassword" required minlength="6">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm Password</label>
+                        <input type="password" class="form-input" id="signUpPasswordConfirm" required minlength="6">
+                    </div>
+                    <button type="submit" class="auth-btn">CREATE ACCOUNT</button>
+                </form>
+                
+                <div class="auth-toggle">
+                    <span id="toggleText">Don't have an account?</span>
+                    <a class="auth-toggle-link" id="toggleLink">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Upgrade Modal -->
+    <div class="upgrade-modal" id="upgradeModal">
+        <div class="upgrade-content">
+            <h2>🚀 Upgrade to Pro</h2>
+            <p>You've used all 10 free questions this month! Upgrade to Pro for unlimited questions, voice access, photo analysis, and more.</p>
+            <div class="upgrade-buttons">
+                <a href="https://buy.stripe.com/test_5kQ6oJ50D2Ne9pOa7r3sI02" class="upgrade-btn">Upgrade to Pro - $49/month</a>
+                <a href="https://buy.stripe.com/test_cNi5kFfFh87ydG4gvP3sI03" class="upgrade-btn">Standard Plan - $29/month</a>
+                <button class="upgrade-btn secondary" onclick="closeUpgradeModal()">Maybe Later</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Main App -->
+    <div id="app">
+        <!-- Usage Banner -->
+        <div class="usage-banner" id="usageBanner" style="display:none;"></div>
+        
+        <div class="header">
+            <div>
+                <span>🛡️ SafetyFirst.AI</span>
+                <span class="tier-badge" id="tierBadge">Trial</span>
+            </div>
+            <div class="header-buttons">
+                <button class="refresh-btn" onclick="refreshSubscription()" title="Refresh subscription status">🔄</button>
+                <button class="billing-btn" onclick="manageBilling()" id="billingBtn" style="display:none;">Manage Billing</button>
+                <button class="logout-btn" onclick="handleLogout()">Logout</button>
+            </div>
+        </div>
+        
+        <div class="main-content">
+            <!-- Voice Card -->
+            <div class="action-card" id="voiceCard">
+                <div class="action-icon">📞</div>
+                <div class="action-title">Safety Hotline</div>
+                <div class="action-description">Call our AI assistant for instant guidance</div>
+                <button class="btn" onclick="callVoice()" id="voiceBtn">CALL NOW</button>
+            </div>
+            
+            <!-- Chat Card -->
+            <div class="action-card">
+                <div class="action-icon">💬</div>
+                <div class="action-title">Ask a Question</div>
+                <div class="action-description">Get instant AI-powered answers</div>
+                <div class="messages" id="messages">
+                    <div class="message message-ai">G'day! Ask me about Australian WHS regulations.</div>
+                </div>
+                <input type="text" class="chat-input" id="chatInput" placeholder="What height requires fall protection?" onkeypress="if(event.key==='Enter') sendMessage()">
+                <button class="btn" onclick="sendMessage()">ASK QUESTION</button>
+                <div id="questionCount" style="text-align:center; margin-top:12px; color:#666; font-size:14px;"></div>
+            </div>
+            
+            <!-- Photo Card -->
+            <div class="action-card" id="photoCard">
+                <div class="action-icon">📸</div>
+                <div class="action-title">Analyze Hazard</div>
+                <div class="action-description">Take a photo for AI hazard identification</div>
+                <input type="file" accept="image/*" capture="environment" style="display:none" id="photoInput" onchange="analyzePhoto(event)">
+                <button class="btn" onclick="document.getElementById('photoInput').click()" id="photoBtn">TAKE PHOTO</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Configuration
+        const SUPABASE_URL = 'https://gpbncxphtouzgkbtbyst.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwYm5jeHBodG91emdrYnRieXN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg1MjUwODksImV4cCI6MjA4NDEwMTA4OX0.FOtzAYWrxcHOgL1giANAFHxCTeilu_U2BU3QyC1zdWk';
+        const STRIPE_PUBLISHABLE_KEY = 'pk_test_51SrrrKuRwd5Y4SXuHXq0KXHy4PxcaLYdOqXuXTJGj0x7vZ2FO2BKGmPTzzKllSC37EKGdG7LqQraDPPb5LqD7w00lYjWYx8L';
+        const API_URL = 'https://safetyfirstai.app.n8n.cloud/webhook/whs-query';
+        
+        const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        let currentUser = null;
+        let userTier = 'trial';
+        let questionCount = 0;
+        let isSignUpMode = false;
+        
+        // Initialize
+        async function init() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) {
+                currentUser = session.user;
+                await loadUserData();
+                showApp();
+                updateUI();
+            }
+        }
+        
+        // Load user tier and usage - FIXED: Always fetch fresh data
+        async function loadUserData() {
+            try {
+                // CRITICAL FIX: Add timestamp to force fresh fetch and disable caching
+                const timestamp = new Date().getTime();
+                const { data, error } = await supabaseClient
+                    .from('user_subscriptions')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .single();
+                
+                if (data) {
+                    userTier = data.tier || 'trial';
+                    questionCount = data.question_count || 0;
+                    
+                    // Clear any cached tier data from localStorage
+                    localStorage.removeItem('cached_tier');
+                    localStorage.removeItem('cached_question_count');
+                    
+                    console.log('✅ Fresh subscription data loaded:', { userTier, questionCount });
+                } else if (error) {
+                    console.log('Creating new user subscription...');
+                    await createUserSubscription();
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                await createUserSubscription();
+            }
+        }
+        
+        // Refresh subscription status (manual refresh button)
+        async function refreshSubscription() {
+            console.log('🔄 Refreshing subscription status...');
+            await loadUserData();
+            updateUI();
+            alert('✅ Subscription status refreshed!');
+        }
+        
+        // Create user subscription record
+        async function createUserSubscription() {
+            const { error } = await supabaseClient
+                .from('user_subscriptions')
+                .insert({
+                    user_id: currentUser.id,
+                    tier: 'trial',
+                    question_count: 0,
+                    created_at: new Date().toISOString()
+                });
+            
+            if (!error) {
+                userTier = 'trial';
+                questionCount = 0;
+            }
+        }
+        
+        // Update UI based on tier
+        function updateUI() {
+            const tierBadge = document.getElementById('tierBadge');
+            const voiceBtn = document.getElementById('voiceBtn');
+            const photoBtn = document.getElementById('photoBtn');
+            const voiceCard = document.getElementById('voiceCard');
+            const photoCard = document.getElementById('photoCard');
+            const billingBtn = document.getElementById('billingBtn');
+            const usageBanner = document.getElementById('usageBanner');
+            const questionCountEl = document.getElementById('questionCount');
+            
+            // Update badge
+            tierBadge.textContent = userTier.toUpperCase();
+            tierBadge.className = `tier-badge tier-${userTier}`;
+            
+            // Trial tier restrictions
+            if (userTier === 'trial') {
+                // Lock voice
+                voiceBtn.disabled = true;
+                voiceBtn.textContent = '🔒 PRO FEATURE';
+                voiceCard.classList.add('feature-locked');
+                
+                // Lock photo
+                photoBtn.disabled = true;
+                photoBtn.textContent = '🔒 PRO FEATURE';
+                photoCard.classList.add('feature-locked');
+                
+                // Show question count
+                const remaining = 10 - questionCount;
+                questionCountEl.textContent = `${remaining} free questions remaining this month`;
+                
+                if (questionCount >= 8) {
+                    usageBanner.textContent = `⚠️ Only ${remaining} questions left! Upgrade to Pro for unlimited.`;
+                    usageBanner.className = 'usage-banner warning';
+                    usageBanner.style.display = 'block';
+                } else if (questionCount > 0) {
+                    usageBanner.textContent = `📊 You've used ${questionCount}/10 free questions this month`;
+                    usageBanner.style.display = 'block';
+                }
+            } else {
+                // Paid tier - unlock all
+                voiceBtn.disabled = false;
+                voiceBtn.textContent = 'CALL NOW';
+                voiceCard.classList.remove('feature-locked');
+                
+                photoBtn.disabled = false;
+                photoBtn.textContent = 'TAKE PHOTO';
+                photoCard.classList.remove('feature-locked');
+                
+                billingBtn.style.display = 'inline-block';
+                questionCountEl.textContent = '✅ Unlimited questions';
+                usageBanner.style.display = 'none';
+            }
+        }
+        
+        // Send message with usage tracking
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const msg = input.value.trim();
+            if (!msg) return;
+            
+            // Check usage limit for trial
+            if (userTier === 'trial' && questionCount >= 10) {
+                showUpgradeModal();
+                return;
+            }
+            
+            document.getElementById('messages').innerHTML += `<div class="message message-user">${msg}</div>`;
+            input.value = '';
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: msg })
+                });
+                const data = await response.text();
+                document.getElementById('messages').innerHTML += `<div class="message message-ai">${data}</div>`;
+                document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+                
+                // Increment usage for trial users
+                if (userTier === 'trial') {
+                    await incrementUsage();
+                }
+            } catch (error) {
+                document.getElementById('messages').innerHTML += `<div class="message message-ai">Error: Could not connect to API</div>`;
+            }
+        }
+        
+        // Increment question count
+        async function incrementUsage() {
+            questionCount++;
+            const { error } = await supabaseClient
+                .from('user_subscriptions')
+                .update({ question_count: questionCount })
+                .eq('user_id', currentUser.id);
+            
+            updateUI();
+            
+            if (questionCount >= 10) {
+                showUpgradeModal();
+            }
+        }
+        
+        // Show upgrade modal
+        function showUpgradeModal() {
+            document.getElementById('upgradeModal').classList.add('show');
+        }
+        
+        function closeUpgradeModal() {
+            document.getElementById('upgradeModal').classList.remove('show');
+        }
+        
+        // Manage billing (Stripe customer portal)
+        async function manageBilling() {
+            alert('Opening billing portal... (Stripe Customer Portal will be configured)');
+        }
+        
+        function callVoice() {
+            if (userTier === 'trial') {
+                showUpgradeModal();
+                return;
+            }
+            if (confirm('Call SafetyFirst AI voice assistant?')) {
+                window.location.href = 'tel:+17658856366';
+            }
+        }
+        
+        function analyzePhoto(event) {
+            if (userTier === 'trial') {
+                showUpgradeModal();
+                return;
+            }
+            const file = event.target.files[0];
+            if (!file) return;
+            alert('Photo captured! AI analysis coming soon...');
+            document.getElementById('messages').innerHTML += `<div class="message message-ai">Photo received! AI hazard analysis feature coming soon.</div>`;
+        }
+        
+        // Auth functions
+        document.getElementById('toggleLink').addEventListener('click', () => {
+            isSignUpMode = !isSignUpMode;
+            document.getElementById('signInForm').style.display = isSignUpMode ? 'none' : 'block';
+            document.getElementById('signUpForm').style.display = isSignUpMode ? 'block' : 'none';
+            document.getElementById('toggleText').textContent = isSignUpMode ? 'Already have an account?' : "Don't have an account?";
+            document.getElementById('toggleLink').textContent = isSignUpMode ? 'Sign In' : 'Sign Up';
+        });
+        
+        document.getElementById('signInForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signInEmail').value;
+            const password = document.getElementById('signInPassword').value;
+            showMessage('Signing in...', 'success');
+            const { error, data } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+                showMessage(error.message, 'error');
+            } else { 
+                showMessage('Welcome back!', 'success');
+                currentUser = data.user;
+                await loadUserData();
+                setTimeout(() => {
+                    showApp();
+                    updateUI();
+                }, 1000);
+            }
+        });
+        
+        document.getElementById('signUpForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signUpEmail').value;
+            const password = document.getElementById('signUpPassword').value;
+            const confirm = document.getElementById('signUpPasswordConfirm').value;
+            if (password !== confirm) { showMessage('Passwords do not match', 'error'); return; }
+            showMessage('Creating account...', 'success');
+            const { error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) showMessage(error.message, 'error');
+            else { showMessage('Account created! You can sign in now.', 'success'); setTimeout(() => document.getElementById('toggleLink').click(), 3000); }
+        });
+        
+        async function handleLogout() {
+            await supabaseClient.auth.signOut();
+            localStorage.clear(); // Clear all cached data on logout
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('authScreen').style.display = 'block';
+            showMessage('Logged out', 'success');
+        }
+        
+        function showApp() {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+        }
+        
+        function showMessage(msg, type) {
+            document.getElementById('authMessage').innerHTML = `<div class="auth-${type}">${msg}</div>`;
+        }
+        
+        // Initialize on load
+        init();
+        
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+        
+        // Refresh subscription data when app becomes visible (PWA focus)
+        document.addEventListener('visibilitychange', async () => {
+            if (!document.hidden && currentUser) {
+                console.log('🔄 App focused - refreshing subscription data...');
+                await loadUserData();
+                updateUI();
+            }
+        });
+    </script>
+</body>
+</html>
